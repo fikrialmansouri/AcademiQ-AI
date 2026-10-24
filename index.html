@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f8">
+  <title>AcademiQ | Academic Email Assistant</title>
+  <style>
+    :root { color-scheme: light; --ink:#202b35; --muted:#6c7882; --line:#e4e9ed; --green:#176b55; --paper:#fff; --bg:#f5f7f6; }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family: "Segoe UI", Tahoma, Arial, sans-serif; min-height:100vh }
+    .shell { width:min(920px,100%); margin:auto; min-height:100vh; display:flex; flex-direction:column; padding:0 22px }
+    header { display:flex; align-items:center; gap:12px; padding:22px 0; border-bottom:1px solid var(--line) }
+    .mark { display:grid; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--green); color:white; font-weight:800; font-size:20px }
+    h1 { font-size:18px; margin:0 0 3px } .subtitle { color:var(--muted); font-size:13px }
+    .chat { flex:1; padding:30px 0; display:flex; flex-direction:column; gap:18px }
+    .welcome { text-align:center; margin:auto; max-width:740px; width:100%; padding:35px 0 }
+    .welcome h2 { font-size:26px; margin:0 0 10px } .welcome p { line-height:1.8; color:var(--muted); margin:0 }
+    .prompt-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:24px; text-align:right }
+    .prompt-card { display:flex; align-items:center; gap:13px; width:100%; min-height:82px; padding:14px 16px; border:1px solid var(--line); border-radius:15px; background:var(--paper); color:var(--ink); text-align:right; cursor:pointer; transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease }
+    .prompt-card:hover { border-color:#a9c9be; transform:translateY(-2px); box-shadow:0 8px 20px #176b5510 }
+    .prompt-card:focus-visible { outline:3px solid #176b5533; outline-offset:2px }
+    .prompt-icon { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:12px; background:#eaf3ef; color:var(--green); font-size:19px }
+    .prompt-copy { display:flex; flex-direction:column; gap:4px }
+    .prompt-copy strong { font-size:14px }
+    .prompt-copy span { color:var(--muted); font-size:12px; line-height:1.5 }
+    .message { max-width:min(760px,94%); white-space:pre-wrap; line-height:1.8; border-radius:18px; padding:15px 18px }
+    .user { align-self:flex-start; background:#e7efec; border-bottom-right-radius:5px }
+    .assistant { align-self:flex-end; width:min(760px,94%); background:var(--paper); border:1px solid var(--line); border-bottom-left-radius:5px }
+    .actions { display:flex; gap:8px; border-top:1px solid var(--line); margin-top:13px; padding-top:12px }
+    button, select, textarea { font:inherit }
+    .action { border:1px solid var(--line); background:white; border-radius:9px; padding:7px 11px; cursor:pointer; font-size:13px; color:var(--ink) }
+    .action:hover { border-color:var(--green); color:var(--green) }
+    .composer-wrap { position:sticky; bottom:0; padding:14px 0 22px; background:linear-gradient(transparent,var(--bg) 16%) }
+    .options { display:flex; align-items:center; gap:9px; margin:0 0 10px; flex-wrap:wrap }
+    .options label { font-size:12px; color:var(--muted) }
+    select { border:1px solid var(--line); border-radius:9px; padding:7px 28px 7px 9px; background:white; color:var(--ink); font-size:13px }
+    .composer { display:flex; gap:10px; align-items:flex-end; border:1px solid #dce3df; background:white; border-radius:17px; padding:10px; box-shadow:0 8px 28px #172f2410 }
+    textarea { flex:1; resize:vertical; min-height:50px; max-height:180px; border:0; outline:0; padding:10px; line-height:1.6; color:var(--ink); background:transparent }
+    #send { border:0; border-radius:11px; background:var(--green); color:#fff; padding:11px 18px; font-weight:650; cursor:pointer }
+    #send:disabled { opacity:.55; cursor:wait }
+    .hint { text-align:center; color:var(--muted); font-size:11px; margin:8px 0 0 }
+    .error { color:#a23535; background:#fff0ef; border:1px solid #f2d4d1; padding:12px 15px; border-radius:12px }
+    @media(max-width:600px) { .shell{padding:0 14px}.message,.assistant{max-width:100%;width:100%}.welcome h2{font-size:22px}.options{gap:6px}.prompt-cards{grid-template-columns:1fr;gap:9px;margin-top:20px}.prompt-card{min-height:72px;padding:11px 13px} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header><div class="mark">AQ</div><div><h1>AcademiQ</h1><div class="subtitle">مساعد كتابة البريد الأكاديمي</div></div></header>
+    <section class="chat" id="chat" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <h2>رسالتك الأكاديمية تبدأ هنا</h2>
+        <p>أخبرني بمن ستراسله، وما الذي تريد قوله. سأساعدك في صياغة رسالة واضحة ومحترمة، وأشرح لك سبب اختيار الصياغة.</p>
+        <div class="prompt-cards" aria-label="اقتراحات سريعة">
+          <button class="prompt-card" type="button" data-prompt="أريد كتابة رسالة رسمية إلى أستاذي السابق لطلب خطاب توصية لبرنامج أو منحة. أدرج معلومات مناسبة أستطيع تخصيصها.">
+            <span class="prompt-icon" aria-hidden="true">✉</span><span class="prompt-copy"><strong>طلب توصية</strong><span>اطلب خطاب توصية أكاديمياً بأسلوب مهني</span></span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="أريد كتابة رسالة إلى أستاذي للاعتذار عن غيابي عن المحاضرة، مع توضيح أنني سأتابع ما فاتني.">
+            <span class="prompt-icon" aria-hidden="true">↩</span><span class="prompt-copy"><strong>اعتذار عن غياب</strong><span>اعتذر عن المحاضرة بنبرة محترمة</span></span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="أريد طلب موعد من مشرفي لمناقشة خطة البحث. اقترح صياغة مرنة تترك له اختيار الوقت المناسب.">
+            <span class="prompt-icon" aria-hidden="true">◷</span><span class="prompt-copy"><strong>طلب موعد</strong><span>رتّب اجتماعاً مع الأستاذ أو المشرف</span></span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="أريد الاستفسار بأدب من أستاذي عن درجتي في المقرر، وأرغب في معرفة ملاحظاته على أدائي.">
+            <span class="prompt-icon" aria-hidden="true">?</span><span class="prompt-copy"><strong>استفسار عن درجة</strong><span>اسأل عن الدرجة أو ملاحظات التقييم</span></span>
+          </button>
+        </div>
+      </div>
+    </section>
+    <div class="composer-wrap">
+      <div class="options">
+        <label for="tone">النبرة</label>
+        <select id="tone"><option value="formal">رسمية جداً</option><option value="friendly">ودية</option><option value="urgent">عاجلة</option><option value="apology">اعتذار</option></select>
+        <label for="language">لغة الرسالة</label>
+        <select id="language"><option value="ar">العربية</option><option value="en">English</option></select>
+      </div>
+      <form class="composer" id="form"><textarea id="message" placeholder="مثال: أريد طلب موعد لمناقشة خطة البحث..." required maxlength="10000"></textarea><button id="send" type="submit">إرسال</button></form>
+      <p class="hint">AcademiQ مخصص للمساعدة في رسائل البريد الأكاديمية</p>
+    </div>
+  </main>
+  <script>
+    const chat = document.querySelector('#chat');
+    const form = document.querySelector('#form');
+    const input = document.querySelector('#message');
+    const send = document.querySelector('#send');
+    // The UI can be opened through FastAPI, Live Server, or directly from disk.
+    // In the latter two cases, send API requests to the local FastAPI server.
+    const separateFrontend = location.protocol === 'file:' || ['5500', '5501', '5173'].includes(location.port);
+    const apiBase = (window.ACADEMIQ_API_BASE || (separateFrontend ? 'http://127.0.0.1:8000' : '')).replace(/\/$/, '');
+    const sessionId = localStorage.getItem('academiq-session') || crypto.randomUUID();
+    localStorage.setItem('academiq-session', sessionId);
+
+    document.querySelectorAll('.prompt-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        input.value = card.dataset.prompt;
+        form.requestSubmit();
+      });
+    });
+
+    function addMessage(text, kind) {
+      const el = document.createElement('div');
+      el.className = `message ${kind}`;
+      el.textContent = text;
+      chat.append(el);
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return el;
+    }
+
+    function actionButton(label, callback) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'action'; button.textContent = label;
+      button.addEventListener('click', callback);
+      return button;
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+      document.querySelector('#welcome')?.remove();
+      addMessage(message, 'user');
+      input.value = ''; send.disabled = true; send.textContent = '...';
+      const pending = addMessage('أجهز لك صياغة مناسبة…', 'assistant');
+      try {
+        const response = await fetch(`${apiBase}/chat`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, session_id: sessionId, tone: document.querySelector('#tone').value, language: document.querySelector('#language').value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'تعذر إكمال الطلب.');
+        pending.textContent = data.reply;
+        const actions = document.createElement('div'); actions.className = 'actions';
+        actions.append(actionButton('نسخ الإيميل', async (event) => {
+          const button = event.currentTarget;
+          try {
+            await navigator.clipboard.writeText(data.email_body || data.reply);
+            button.textContent = 'تم النسخ ✓';
+          } catch {
+            button.textContent = 'تعذر النسخ';
+          }
+          window.setTimeout(() => { button.textContent = 'نسخ الإيميل'; }, 1800);
+        }));
+        actions.append(actionButton('فتح مسودة Gmail', () => {
+          const params = new URLSearchParams({ view: 'cm', fs: '1', su: data.subject || '', body: data.email_body || data.reply });
+          window.open(`https://mail.google.com/mail/?${params.toString()}`, '_blank', 'noopener,noreferrer');
+        }));
+        pending.append(actions);
+      } catch (error) {
+        pending.className = 'error';
+        pending.textContent = error instanceof TypeError
+          ? 'تعذر الوصول إلى الخادم. شغّل FastAPI بالأمر: uvicorn main:app --reload ثم افتح http://127.0.0.1:8000'
+          : error.message;
+      } finally {
+        send.disabled = false; send.textContent = 'إرسال'; input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
